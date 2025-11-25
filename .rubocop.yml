@@ -1,0 +1,68 @@
+require:
+  - rubocop-rspec
+
+AllCops:
+  TargetRubyVersion: 3.0
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - "vendor/**/*"
+    - "bin/**/*"
+
+# Metrics
+Metrics/AbcSize:
+  Max: 50
+
+Metrics/BlockLength:
+  Exclude:
+    - "spec/**/*"
+    - "*.gemspec"
+
+Metrics/ClassLength:
+  Max: 500
+
+Metrics/CyclomaticComplexity:
+  Max: 20
+
+Metrics/MethodLength:
+  Max: 50
+
+Metrics/PerceivedComplexity:
+  Max: 20
+
+# Layout
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - "lib/mysql-pr/error.rb"
+    - "lib/mysql-pr/charset.rb"
+
+# Style
+Style/Documentation:
+  Enabled: false
+
+Style/FrozenStringLiteralComment:
+  Enabled: true
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: double_quotes
+
+# Naming
+Naming/PredicateName:
+  AllowedMethods:
+    - is_num?
+    - is_not_null?
+    - is_pri_key?
+
+Naming/AccessorMethodName:
+  Enabled: false
+
+# RSpec
+RSpec/ExampleLength:
+  Max: 20
+
+RSpec/MultipleExpectations:
+  Max: 5

@@ -1,0 +1,37 @@
+# Bundler
+/.bundle/
+/vendor/bundle
+Gemfile.lock
+
+# Gem build
+/*.gem
+/pkg/
+
+# RSpec
+/.rspec_status
+
+# Coverage
+/coverage/
+
+# Documentation
+/doc/
+/.yardoc/
+
+# IDE
+/.idea/
+/.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Temporary files
+/tmp/
+CLAUDE.md

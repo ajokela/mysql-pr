@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -e
+
+echo "Starting MySQL container..."
+docker compose up -d mysql
+
+echo "Waiting for MySQL to be ready..."
+until docker compose exec -T mysql mysqladmin ping -h localhost -u root -proot --silent 2>/dev/null; do
+  echo "  MySQL not ready yet, waiting..."
+  sleep 2
+done
+
+echo "MySQL is ready!"
+
+echo "Running tests..."
+MYSQL_SERVER=127.0.0.1 \
+MYSQL_USER=root \
+MYSQL_PASSWORD=root \
+MYSQL_DATABASE=test_for_mysql_ruby \
+MYSQL_PORT=3306 \
+bundle exec rspec spec/mysql_spec.rb "$@"
+
+echo "Tests complete."
