@@ -54,7 +54,7 @@ class MysqlPR
     # @param [String] str
     # @return [String]
     def escape_string(str)
-      str.gsub(/[\0\n\r\\\'\"\x1a]/) do |s|
+      str.gsub(/[\0\n\r\\'"\x1a]/) do |s|
         case s
         when "\0" then "\\0"
         when "\n" then "\\n"
@@ -74,7 +74,7 @@ class MysqlPR
 
     # @return [Integer] client version (dummy for MySQL/Ruby compatibility)
     def client_version
-      50000
+      50_000
     end
     alias get_client_version client_version
   end
@@ -113,7 +113,7 @@ class MysqlPR
     @protocol = Protocol.new(host, port, socket, @connect_timeout, @read_timeout, @write_timeout, @ssl_options)
     @protocol.authenticate(user, passwd, db, (@local_infile ? CLIENT_LOCAL_FILES : 0) | flag, @charset)
     @charset ||= @protocol.charset
-    @host_info = (host.nil? || host == "localhost") ? "Localhost via UNIX socket" : "#{host} via TCP/IP"
+    @host_info = host.nil? || host == "localhost" ? "Localhost via UNIX socket" : "#{host} via TCP/IP"
     query(@init_command) if @init_command
     self
   end
@@ -198,11 +198,8 @@ class MysqlPR
   # @option options [Boolean] :required raise error if server doesn't support SSL
   # @option options [String] :hostname hostname for SNI
   # @option options [Symbol] :min_version minimum TLS version (:TLS1_2, :TLS1_3, etc.)
-  # @return [MysqlPR] self
-  def ssl_options=(options)
-    @ssl_options = options
-    self
-  end
+  # @return [Hash] the options hash
+  attr_writer :ssl_options
 
   # Check if SSL is enabled for the current connection.
   # @return [Boolean] true if SSL is enabled
@@ -238,6 +235,7 @@ class MysqlPR
 
   # Set charset of MySQL connection.
   # @param [String, MysqlPR::Charset] cs
+  # @return [MysqlPR::Charset] the charset
   def charset=(cs)
     charset = cs.is_a?(Charset) ? cs : Charset.by_name(cs)
     if @protocol
@@ -245,7 +243,6 @@ class MysqlPR
       query("SET NAMES #{charset.name}")
     end
     @charset = charset
-    cs
   end
 
   # @return [String] charset name
@@ -274,9 +271,7 @@ class MysqlPR
   end
 
   # @return [String] connection type
-  def host_info
-    @host_info
-  end
+  attr_reader :host_info
   alias get_host_info host_info
 
   # @return [Integer] protocol version
@@ -332,7 +327,7 @@ class MysqlPR
   # @param [String] db database name that may contain wild card
   # @return [Array<String>] database list
   def list_dbs(db = nil)
-    db &&= db.gsub(/[\\\']/) { "\\#{$&}" }
+    db &&= db.gsub(/[\\']/) { "\\#{::Regexp.last_match(0)}" }
     query(db ? "show databases like '#{db}'" : "show databases").map(&:first)
   end
 
@@ -360,11 +355,9 @@ class MysqlPR
         end
         return self
       end
-      if @query_with_result
-        return @fields ? store_result : nil
-      else
-        return self
-      end
+      return @fields ? store_result : nil if @query_with_result
+
+      self
     rescue ServerError => e
       @last_error = e
       @sqlstate = e.sqlstate
@@ -595,14 +588,14 @@ class MysqlPR
     # @return [Hash] field information
     def to_hash
       {
-        "name"       => @name,
-        "table"      => @table,
-        "def"        => @default,
-        "type"       => @type,
-        "length"     => @length,
+        "name" => @name,
+        "table" => @table,
+        "def" => @default,
+        "type" => @type,
+        "length" => @length,
         "max_length" => max_length,
-        "flags"      => @flags,
-        "decimals"   => @decimals
+        "flags" => @flags,
+        "decimals" => @decimals
       }
     end
     alias hash to_hash
@@ -689,9 +682,7 @@ class MysqlPR
       row = fetch
       return nil unless row
 
-      if with_table && @fieldname_with_table.nil?
-        @fieldname_with_table = @fields.map { |f| "#{f.table}.#{f.name}" }
-      end
+      @fieldname_with_table = @fields.map { |f| "#{f.table}.#{f.name}" } if with_table && @fieldname_with_table.nil?
       ret = {}
       @fields.each_index do |i|
         fname = with_table ? @fieldname_with_table[i] : @fields[i].name
@@ -853,8 +844,7 @@ class MysqlPR
   class Stmt
     include Enumerable
 
-    attr_reader :affected_rows, :insert_id, :server_status, :warning_count
-    attr_reader :param_count, :fields, :sqlstate
+    attr_reader :affected_rows, :insert_id, :server_status, :warning_count, :param_count, :fields, :sqlstate
 
     def self.finalizer(protocol, statement_id)
       proc do

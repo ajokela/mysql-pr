@@ -153,11 +153,11 @@ class MysqlPR
     AUTO_INCREMENT_FLAG = 512
     TIMESTAMP_FLAG      = 1024
     SET_FLAG            = 2048
-    NUM_FLAG            = 32768
-    PART_KEY_FLAG       = 16384
-    GROUP_FLAG          = 32768
-    UNIQUE_FLAG         = 65536
-    BINCMP_FLAG         = 131072
+    NUM_FLAG            = 32_768
+    PART_KEY_FLAG       = 16_384
+    GROUP_FLAG          = 32_768
+    UNIQUE_FLAG         = 65_536
+    BINCMP_FLAG         = 131_072
   end
 
   class Stmt

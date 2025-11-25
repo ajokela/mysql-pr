@@ -13,7 +13,7 @@ MYSQL_SOCKET   = ENV["MYSQL_SOCKET"]
 
 RSpec.describe "MysqlPR::VERSION" do
   it "returns client version" do
-    expect(MysqlPR::VERSION).to eq "3.0.0"
+    expect(MysqlPR::VERSION).to eq "3.0.1"
   end
 end
 

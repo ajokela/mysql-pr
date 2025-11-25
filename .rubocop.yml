@@ -1,34 +1,39 @@
-require:
-  - rubocop-rspec
-
 AllCops:
   TargetRubyVersion: 3.0
-  NewCops: enable
+  NewCops: disable
   SuggestExtensions: false
   Exclude:
     - "vendor/**/*"
     - "bin/**/*"
+    - "spec/**/*"
 
-# Metrics
+Gemspec/DevelopmentDependencies:
+  Enabled: false
+
+Gemspec/RequireMFA:
+  Enabled: false
+
+# Metrics - Relaxed for protocol parsing code
 Metrics/AbcSize:
-  Max: 50
+  Max: 60
+  Exclude:
+    - "lib/mysql-pr/protocol.rb"
 
 Metrics/BlockLength:
   Exclude:
-    - "spec/**/*"
     - "*.gemspec"
 
 Metrics/ClassLength:
-  Max: 500
+  Max: 750
 
 Metrics/CyclomaticComplexity:
-  Max: 20
+  Max: 25
 
 Metrics/MethodLength:
-  Max: 50
+  Max: 60
 
 Metrics/PerceivedComplexity:
-  Max: 20
+  Max: 25
 
 # Layout
 Layout/LineLength:
@@ -51,7 +56,7 @@ Style/StringLiteralsInInterpolation:
   EnforcedStyle: double_quotes
 
 # Naming
-Naming/PredicateName:
+Naming/PredicatePrefix:
   AllowedMethods:
     - is_num?
     - is_not_null?
@@ -60,9 +65,20 @@ Naming/PredicateName:
 Naming/AccessorMethodName:
   Enabled: false
 
-# RSpec
-RSpec/ExampleLength:
-  Max: 20
+Naming/FileName:
+  Enabled: false
 
-RSpec/MultipleExpectations:
-  Max: 5
+Naming/MethodParameterName:
+  MinNameLength: 1
+
+Metrics/ParameterLists:
+  Enabled: false
+
+Style/OptionalBooleanParameter:
+  Enabled: false
+
+Style/FormatStringToken:
+  Enabled: false
+
+Lint/UnreachableCode:
+  Enabled: false

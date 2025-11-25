@@ -8,14 +8,15 @@ class MysqlPR
     ERRNO = 0
 
     def self.define_error_class(prefix_re)
-      self.constants.each do |errname|
+      constants.each do |errname|
         errname = errname.to_s
         next unless errname =~ prefix_re
-        errno = self.const_get errname
-        excname = errname.sub(prefix_re,'').gsub(/(\A.|_.)([A-Z]+)/){$1+$2.downcase}.gsub(/_/,'')
+
+        errno = const_get errname
+        excname = errname.sub(prefix_re, "").gsub(/(\A.|_.)([A-Z]+)/) { ::Regexp.last_match(1) + ::Regexp.last_match(2).downcase }.gsub(/_/, "")
         klass = Class.new self
-        klass.const_set 'ERRNO', errno
-        self.const_set excname, klass
+        klass.const_set "ERRNO", errno
+        const_set excname, klass
         self::ERROR_MAP[errno] = klass
         MysqlPR::Error.const_set errname, errno
       end
@@ -23,7 +24,7 @@ class MysqlPR
 
     attr_reader :sqlstate, :error
 
-    def initialize(message, sqlstate='HY000')
+    def initialize(message, sqlstate = "HY000")
       @sqlstate = sqlstate
       @error = message
       super message
@@ -36,7 +37,7 @@ class MysqlPR
 
   # server side error
   class ServerError < Error
-    ERROR_MAP = {}
+    ERROR_MAP = {} # rubocop:disable Style/MutableConstant
 
     ER_HASHCHK                                                = 1000
     ER_NISAMCHK                                               = 1001
@@ -747,11 +748,11 @@ class MysqlPR
   end
 
   ServerError.define_error_class(/\AER_/)
-  ServerError::ERROR_MAP.values.each{|v| MysqlPR.const_set v.name.split(/::/).last, v} # for compatibility
+  ServerError::ERROR_MAP.each_value { |v| MysqlPR.const_set v.name.split(/::/).last, v } # for compatibility
 
   # client side error
   class ClientError < Error
-    ERROR_MAP = {}
+    ERROR_MAP = {} # rubocop:disable Style/MutableConstant
 
     CR_UNKNOWN_ERROR                         = 2000
     CR_SOCKET_CREATE_ERROR                   = 2001
@@ -820,5 +821,4 @@ class MysqlPR
   # protocol error
   class ProtocolError < ClientError
   end
-
 end
