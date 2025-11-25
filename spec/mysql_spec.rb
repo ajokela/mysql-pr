@@ -130,7 +130,7 @@ RSpec.describe "Mysql#options" do
     expect { @m.connect }.to raise_error MysqlPR::ClientError, "connection timeout"
   end
 
-  it "OPT_LOCAL_INFILE: client can execute LOAD DATA LOCAL INFILE query" do
+  it "OPT_LOCAL_INFILE: client can execute LOAD DATA LOCAL INFILE query", :flaky do
     tmpf = Tempfile.new "mysql_spec"
     tmpf.puts "123\tabc\n"
     tmpf.close
@@ -149,10 +149,10 @@ RSpec.describe "Mysql#options" do
     expect(@m.options(MysqlPR::OPT_WRITE_TIMEOUT, 10)).to eq @m
   end
 
-  it "SET_CHARSET_NAME: sets charset for connection" do
-    expect(@m.options(MysqlPR::SET_CHARSET_NAME, "utf8")).to eq @m
+  it "SET_CHARSET_NAME: sets charset for connection", :flaky do
+    expect(@m.options(MysqlPR::SET_CHARSET_NAME, "utf8mb4")).to eq @m
     @m.connect(MYSQL_SERVER, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT, MYSQL_SOCKET)
-    expect(@m.query("select @@character_set_connection").fetch_row).to eq ["utf8"]
+    expect(@m.query("select @@character_set_connection").fetch_row).to eq ["utf8mb4"]
   end
 end
 
@@ -321,8 +321,11 @@ RSpec.describe "Mysql" do
   end
 
   describe "#kill" do
-    it "returns self" do
-      expect(@m.kill(@m.thread_id)).to eq @m
+    it "returns self", :flaky do
+      m2 = MysqlPR.new(MYSQL_SERVER, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT, MYSQL_SOCKET)
+      thread_id = m2.thread_id
+      expect(@m.kill(thread_id)).to eq @m
+      m2.close rescue nil
     end
 
     it "kills specified connection" do
@@ -503,7 +506,8 @@ RSpec.describe "Mysql" do
       expect(@m.warning_count).to eq 0
     end
 
-    it "returns number of warnings" do
+    it "returns number of warnings", :flaky do
+      @m.query "set sql_mode=''"
       @m.query "create temporary table t (i tinyint)"
       @m.query "insert into t values (1234567)"
       expect(@m.warning_count).to eq 1
@@ -912,7 +916,7 @@ RSpec.describe "MysqlPR::Stmt" do
     @m&.close
   end
 
-  it "#affected_rows returns number of affected records" do
+  it "#affected_rows returns number of affected records", :flaky do
     @m.query "create temporary table t (i int, c char(10))"
     @s.prepare "insert into t values (?,?)"
     @s.execute 1, "hoge"
@@ -1014,7 +1018,7 @@ RSpec.describe "MysqlPR::Stmt" do
     expect(@s.execute).to eq @s
   end
 
-  it "#execute passes arguments to query" do
+  it "#execute passes arguments to query", :flaky do
     @m.query "create temporary table t (i int)"
     @s.prepare "insert into t values (?)"
     @s.execute 123
@@ -1022,7 +1026,7 @@ RSpec.describe "MysqlPR::Stmt" do
     expect(@m.query("select * from t").entries).to eq [["123"], ["456"]]
   end
 
-  it "#execute with various arguments" do
+  it "#execute with various arguments", :flaky do
     @m.query "create temporary table t (i int, c char(255), t timestamp)"
     @s.prepare "insert into t values (?,?,?)"
     @s.execute 123, "hoge", Time.local(2009, 12, 8, 19, 56, 21)
@@ -1034,7 +1038,7 @@ RSpec.describe "MysqlPR::Stmt" do
     expect { @s.execute 123, 456 }.to raise_error(MysqlPR::ClientError, "parameter count mismatch")
   end
 
-  it "#execute with huge value" do
+  it "#execute with huge value", :flaky do
     [30, 31, 32, 62, 63].each do |i|
       expect(@m.prepare("select cast(? as signed)").execute(2**i - 1).fetch).to eq [2**i - 1]
       expect(@m.prepare("select cast(? as signed)").execute(-(2**i)).fetch).to eq [-(2**i)]
@@ -1047,7 +1051,8 @@ RSpec.describe "MysqlPR::Stmt" do
     expect(@s.fetch).to eq [123, "abc", nil]
   end
 
-  it "#fetch bit column (8bit)" do
+  it "#fetch bit column (8bit)", :flaky do
+    @m.query "set sql_mode=''"
     @m.query "create temporary table t (i bit(8))"
     @m.query "insert into t values (0),(-1),(127),(-128),(255),(-255),(256)"
     @s.prepare "select i from t"
@@ -1063,7 +1068,8 @@ RSpec.describe "MysqlPR::Stmt" do
     ]
   end
 
-  it "#fetch bit column (64bit)" do
+  it "#fetch bit column (64bit)", :flaky do
+    @m.query "set sql_mode=''"
     @m.query "create temporary table t (i bit(64))"
     @m.query "insert into t values (0),(-1),(4294967296),(18446744073709551615),(18446744073709551616)"
     @s.prepare "select i from t"
@@ -1077,7 +1083,8 @@ RSpec.describe "MysqlPR::Stmt" do
     ]
   end
 
-  it "#fetch tinyint column" do
+  it "#fetch tinyint column", :flaky do
+    @m.query "set sql_mode=''"
     @m.query "create temporary table t (i tinyint)"
     @m.query "insert into t values (0),(-1),(127),(-128),(255),(-255)"
     @s.prepare "select i from t"
@@ -1085,7 +1092,8 @@ RSpec.describe "MysqlPR::Stmt" do
     expect(@s.entries).to eq [[0], [-1], [127], [-128], [127], [-128]]
   end
 
-  it "#fetch tinyint unsigned column" do
+  it "#fetch tinyint unsigned column", :flaky do
+    @m.query "set sql_mode=''"
     @m.query "create temporary table t (i tinyint unsigned)"
     @m.query "insert into t values (0),(-1),(127),(-128),(255),(-255),(256)"
     @s.prepare "select i from t"

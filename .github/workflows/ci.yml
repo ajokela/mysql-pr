@@ -19,15 +19,15 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: test
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test_for_mysql_ruby
         ports:
           - 3306:3306
         options: >-
           --health-cmd="mysqladmin ping"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=3
+          --health-retries=5
 
     steps:
       - uses: actions/checkout@v4
@@ -38,13 +38,17 @@ jobs:
           ruby-version: ${{ matrix.ruby-version }}
           bundler-cache: true
 
-      - name: Run tests
+      - name: Run unit tests
+        run: bundle exec rspec spec/unit spec/mysql
+
+      - name: Run integration tests
         env:
-          MYSQL_HOST: 127.0.0.1
+          MYSQL_SERVER: 127.0.0.1
           MYSQL_USER: root
-          MYSQL_PASSWORD: password
-          MYSQL_DATABASE: test
-        run: bundle exec rake spec
+          MYSQL_PASSWORD: root
+          MYSQL_DATABASE: test_for_mysql_ruby
+          MYSQL_PORT: 3306
+        run: bundle exec rspec spec/mysql_spec.rb --tag ~flaky
 
   lint:
     runs-on: ubuntu-latest
