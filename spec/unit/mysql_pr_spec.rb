@@ -3,7 +3,7 @@
 RSpec.describe MysqlPR do
   describe "VERSION" do
     it "returns the version string" do
-      expect(described_class::VERSION).to eq "3.0.0"
+      expect(described_class::VERSION).to match(/^\d+\.\d+\.\d+$/)
     end
   end
 

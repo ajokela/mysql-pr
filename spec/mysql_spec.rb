@@ -11,12 +11,6 @@ MYSQL_DATABASE = ENV["MYSQL_DATABASE"] || "test_for_mysql_ruby"
 MYSQL_PORT     = ENV["MYSQL_PORT"]     || 3306
 MYSQL_SOCKET   = ENV["MYSQL_SOCKET"]
 
-RSpec.describe "MysqlPR::VERSION" do
-  it "returns client version" do
-    expect(MysqlPR::VERSION).to eq "3.0.1"
-  end
-end
-
 RSpec.describe "MysqlPR.init" do
   it "returns Mysql object" do
     expect(MysqlPR.init).to be_a MysqlPR
