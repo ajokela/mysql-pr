@@ -2,6 +2,34 @@
 
 require "mysql-pr"
 
+# Track all MySQL connections for cleanup
+module MysqlConnectionTracker
+  @connections = []
+  @mutex = Mutex.new
+
+  class << self
+    def track(conn)
+      @mutex.synchronize { @connections << conn }
+      conn
+    end
+
+    def close_all
+      @mutex.synchronize do
+        @connections.each do |conn|
+          conn&.close
+        rescue StandardError
+          nil
+        end
+        @connections.clear
+      end
+    end
+
+    def connection_count
+      @mutex.synchronize { @connections.size }
+    end
+  end
+end
+
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|
     expectations.include_chain_clauses_in_custom_matcher_descriptions = true
@@ -19,4 +47,22 @@ RSpec.configure do |config|
 
   config.order = :random
   Kernel.srand config.seed
+
+  # Clean up any lingering connections after each example
+  config.after(:each) do
+    # Give MySQL a moment to process any pending operations
+    sleep 0.01
+  end
+
+  # Force close all connections after each example group
+  config.after(:context) do
+    MysqlConnectionTracker.close_all
+    # Allow MySQL to reclaim connections
+    sleep 0.05
+  end
+
+  # Final cleanup after all tests
+  config.after(:suite) do
+    MysqlConnectionTracker.close_all
+  end
 end

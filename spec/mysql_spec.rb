@@ -2,6 +2,7 @@
 
 require "tempfile"
 require "mysql-pr"
+require_relative "spec_helper"
 
 # MYSQL_USER must have ALL privilege for MYSQL_DATABASE.* and RELOAD privilege for *.*
 MYSQL_SERVER   = ENV["MYSQL_SERVER"]   || "127.0.0.1"
@@ -10,6 +11,35 @@ MYSQL_PASSWORD = ENV["MYSQL_PASSWORD"] || ""
 MYSQL_DATABASE = ENV["MYSQL_DATABASE"] || "test_for_mysql_ruby"
 MYSQL_PORT     = ENV["MYSQL_PORT"]     || 3306
 MYSQL_SOCKET   = ENV["MYSQL_SOCKET"]
+
+# Helper module for creating MySQL connections with retry logic
+module MysqlTestHelper
+  MAX_RETRIES = 3
+  RETRY_DELAY = 0.5
+
+  def self.create_connection(server = MYSQL_SERVER, user = MYSQL_USER, password = MYSQL_PASSWORD,
+                             database = MYSQL_DATABASE, port = MYSQL_PORT, socket = MYSQL_SOCKET)
+    retries = 0
+    begin
+      conn = MysqlPR.new(server, user, password, database, port, socket)
+      MysqlConnectionTracker.track(conn)
+      conn
+    rescue MysqlPR::ClientError => e
+      retries += 1
+      if retries < MAX_RETRIES
+        sleep RETRY_DELAY
+        retry
+      end
+      raise e
+    end
+  end
+
+  def self.safe_close(conn)
+    conn&.close
+  rescue StandardError
+    nil
+  end
+end
 
 RSpec.describe "MysqlPR.init" do
   it "returns Mysql object" do
@@ -47,7 +77,7 @@ RSpec.describe "MysqlPR.new" do
   after { @m&.close }
 
   it "connects to mysqld" do
-    @m = MysqlPR.new(MYSQL_SERVER, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT, MYSQL_SOCKET)
+    @m = MysqlTestHelper.create_connection
     expect(@m).to be_a MysqlPR
   end
 end
@@ -152,11 +182,11 @@ end
 
 RSpec.describe "Mysql" do
   before do
-    @m = MysqlPR.new(MYSQL_SERVER, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT, MYSQL_SOCKET)
+    @m = MysqlTestHelper.create_connection
   end
 
   after do
-    @m&.close rescue nil
+    MysqlTestHelper.safe_close(@m)
   end
 
   describe "#escape_string" do
@@ -316,16 +346,16 @@ RSpec.describe "Mysql" do
 
   describe "#kill" do
     it "returns self", :flaky do
-      m2 = MysqlPR.new(MYSQL_SERVER, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT, MYSQL_SOCKET)
+      m2 = MysqlTestHelper.create_connection
       thread_id = m2.thread_id
       expect(@m.kill(thread_id)).to eq @m
-      m2.close rescue nil
+      MysqlTestHelper.safe_close(m2)
     end
 
     it "kills specified connection" do
-      m = MysqlPR.new(MYSQL_SERVER, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT, MYSQL_SOCKET)
+      m = MysqlTestHelper.create_connection
       expect(m.list_processes.map(&:first)).to include @m.thread_id.to_s
-      m.close
+      MysqlTestHelper.safe_close(m)
     end
   end
 
@@ -609,7 +639,7 @@ end
 
 RSpec.describe "multiple statement query:" do
   before do
-    @m = MysqlPR.new(MYSQL_SERVER, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT, MYSQL_SOCKET)
+    @m = MysqlTestHelper.create_connection
     @m.set_server_option(MysqlPR::OPTION_MULTI_STATEMENTS_ON)
   end
 
@@ -641,7 +671,7 @@ end
 
 RSpec.describe "MysqlPR::Result" do
   before do
-    @m = MysqlPR.new(MYSQL_SERVER, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT, MYSQL_SOCKET)
+    @m = MysqlTestHelper.create_connection
     @m.charset = "latin1"
     @m.query 'create temporary table t (id int, str char(10), primary key (id))'
     @m.query "insert into t values (1,'abc'),(2,'defg'),(3,'hi'),(4,null)"
@@ -793,7 +823,7 @@ end
 
 RSpec.describe "MysqlPR::Field" do
   before do
-    @m = MysqlPR.new(MYSQL_SERVER, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT, MYSQL_SOCKET)
+    @m = MysqlTestHelper.create_connection
     @m.charset = "latin1"
     @m.query 'create temporary table t (id int default 0, str char(10), primary key (id))'
     @m.query "insert into t values (1,'abc'),(2,'defg'),(3,'hi'),(4,null)"
@@ -887,7 +917,7 @@ RSpec.describe "MysqlPR::Field" do
 end
 
 RSpec.describe "create MysqlPR::Stmt object:" do
-  before { @m = MysqlPR.new(MYSQL_SERVER, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT, MYSQL_SOCKET) }
+  before { @m = MysqlTestHelper.create_connection }
   after { @m&.close }
 
   it "Mysql#stmt_init returns MysqlPR::Stmt object" do
@@ -901,7 +931,7 @@ end
 
 RSpec.describe "MysqlPR::Stmt" do
   before do
-    @m = MysqlPR.new(MYSQL_SERVER, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE, MYSQL_PORT, MYSQL_SOCKET)
+    @m = MysqlTestHelper.create_connection
     @s = @m.stmt_init
   end
 
