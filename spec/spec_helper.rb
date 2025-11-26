@@ -48,17 +48,9 @@ RSpec.configure do |config|
   config.order = :random
   Kernel.srand config.seed
 
-  # Clean up any lingering connections after each example
-  config.after(:each) do
-    # Give MySQL a moment to process any pending operations
-    sleep 0.01
-  end
-
   # Force close all connections after each example group
   config.after(:context) do
     MysqlConnectionTracker.close_all
-    # Allow MySQL to reclaim connections
-    sleep 0.05
   end
 
   # Final cleanup after all tests
