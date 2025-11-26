@@ -12,26 +12,13 @@ MYSQL_DATABASE = ENV["MYSQL_DATABASE"] || "test_for_mysql_ruby"
 MYSQL_PORT     = ENV["MYSQL_PORT"]     || 3306
 MYSQL_SOCKET   = ENV["MYSQL_SOCKET"]
 
-# Helper module for creating MySQL connections with retry logic
+# Helper module for creating MySQL connections
 module MysqlTestHelper
-  MAX_RETRIES = 3
-  RETRY_DELAY = 0.5
-
   def self.create_connection(server = MYSQL_SERVER, user = MYSQL_USER, password = MYSQL_PASSWORD,
                              database = MYSQL_DATABASE, port = MYSQL_PORT, socket = MYSQL_SOCKET)
-    retries = 0
-    begin
-      conn = MysqlPR.new(server, user, password, database, port, socket)
-      MysqlConnectionTracker.track(conn)
-      conn
-    rescue MysqlPR::ClientError => e
-      retries += 1
-      if retries < MAX_RETRIES
-        sleep RETRY_DELAY
-        retry
-      end
-      raise e
-    end
+    conn = MysqlPR.new(server, user, password, database, port, socket)
+    MysqlConnectionTracker.track(conn)
+    conn
   end
 
   def self.safe_close(conn)
